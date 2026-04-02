@@ -5,7 +5,7 @@ services:
     runtime: python311
     region: frankfurt   # closest to Israel
     buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn --worker-class eventlet -w 1 "run:app"
+    startCommand: gunicorn -k geventwebsocket.gunicorn.workers.GeventWebSocketWorker -w 1 run:app
     envVars:
       - key: SECRET_KEY
         generateValue: true

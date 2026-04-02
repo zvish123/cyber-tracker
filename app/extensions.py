@@ -6,4 +6,4 @@ from flask_socketio import SocketIO
 db = SQLAlchemy()
 login_manager = LoginManager()
 mail = Mail()
-socketio = SocketIO(async_mode='threading')
+socketio = SocketIO(async_mode='gevent')
