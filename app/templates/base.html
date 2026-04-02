@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl"
+      data-user-role="{{ current_user.role if current_user.is_authenticated else '' }}"
+      data-student-id="{{ current_user.student_profile.id if current_user.is_authenticated and current_user.is_student and current_user.student_profile else '' }}">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="csrf-token" content="{{ csrf_token() }}">
+  <title>{% block title %}מעקב פרויקטים סייבר{% endblock %}</title>
+
+  <!-- Bootstrap 5 RTL -->
+  <link rel="stylesheet"
+        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.rtl.min.css"
+        crossorigin="anonymous">
+  <!-- Bootstrap Icons -->
+  <link rel="stylesheet"
+        href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/custom.css') }}">
+</head>
+<body class="bg-light">
+
+<!-- Navbar -->
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm">
+  <div class="container-fluid">
+    <a class="navbar-brand fw-bold" href="{{ url_for('auth.index') }}">
+      <i class="bi bi-shield-lock-fill text-info me-1"></i>מעקב פרויקטים סייבר
+    </a>
+
+    {% if current_user.is_authenticated %}
+    <div class="d-flex align-items-center gap-2 me-auto">
+      {% if current_user.is_teacher %}
+      {% if current_user.is_admin %}
+      <a class="nav-link text-warning fw-semibold" href="{{ url_for('admin.dashboard') }}">
+        <i class="bi bi-gear-fill"></i> ניהול
+      </a>
+      {% endif %}
+      <a class="nav-link text-light {% if request.endpoint and request.endpoint.startswith('teacher.dashboard') %}fw-bold{% endif %}"
+         href="{{ url_for('teacher.dashboard') }}">לוח בקרה</a>
+      <a class="nav-link text-light" href="{{ url_for('teacher.students') }}">תלמידים</a>
+      <a class="nav-link text-light" href="{{ url_for('teacher.classes') }}">כיתות</a>
+      <a class="nav-link text-light" href="{{ url_for('teacher.meetings') }}">פגישות</a>
+      <a class="nav-link text-light" href="{{ url_for('teacher.reports') }}">דוחות</a>
+      {% else %}
+      <a class="nav-link text-light" href="{{ url_for('student.dashboard') }}">הפרויקט שלי</a>
+      <a class="nav-link text-light" href="{{ url_for('student.meetings') }}">הפגישות שלי</a>
+      {% endif %}
+    </div>
+    <div class="d-flex align-items-center gap-2">
+      <a href="{{ url_for('auth.profile') }}" class="text-light text-decoration-none small">
+        <i class="bi bi-person-circle"></i> {{ current_user.full_name }}
+        <span class="badge bg-secondary ms-1">
+          {% if current_user.is_admin %}מנהל
+          {% elif current_user.is_teacher %}מורה
+          {% else %}תלמיד{% endif %}
+        </span>
+      </a>
+      {% if current_user.is_teacher %}
+      {% if current_user.google_credentials %}
+      <span class="badge bg-success"><i class="bi bi-google"></i> מחובר</span>
+      {% else %}
+      <a href="{{ url_for('teacher.google_auth') }}" class="btn btn-sm btn-outline-info">
+        <i class="bi bi-google"></i> חבר לגוגל
+      </a>
+      {% endif %}
+      {% endif %}
+      <a href="{{ url_for('auth.logout') }}" class="btn btn-sm btn-outline-light">
+        <i class="bi bi-box-arrow-right"></i> יציאה
+      </a>
+    </div>
+    {% endif %}
+  </div>
+</nav>
+
+<!-- Live notification area -->
+<div id="meeting-notifications" class="container-fluid mt-2 px-3"></div>
+
+<div class="container-fluid py-3 px-4">
+  <!-- Flash messages -->
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}
+    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+      {{ message }}
+      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {% endfor %}
+  {% endwith %}
+
+  {% block content %}{% endblock %}
+</div>
+
+<!-- Bootstrap JS bundle -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+        crossorigin="anonymous"></script>
+
+{% if current_user.is_authenticated %}
+<!-- Socket.IO client — version must match Flask-SocketIO 5.3.x = protocol v4 -->
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js" crossorigin="anonymous"></script>
+<script src="{{ url_for('static', filename='js/realtime.js') }}"></script>
+{% endif %}
+
+{% block scripts %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,121 @@
+{% extends 'base.html' %}
+{% block title %}דוח — {{ student.user.full_name }}{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="{{ url_for('teacher.reports') }}">דוחות</a></li>
+    <li class="breadcrumb-item active">{{ student.user.full_name }}</li>
+  </ol>
+</nav>
+
+<!-- Student header -->
+<div class="card shadow-sm mb-4">
+  <div class="card-body">
+    <div class="row align-items-center">
+      <div class="col">
+        <h4 class="mb-1">{{ student.user.full_name }}</h4>
+        <span class="text-muted">{{ student.class_name or '' }}</span>
+        <span class="text-muted ms-2">|</span>
+        <a href="mailto:{{ student.user.email }}" class="text-muted ms-2">{{ student.user.email }}</a>
+      </div>
+      <div class="col-auto">
+        <small class="text-muted">דוח מתאריך: {{ now.strftime('%d/%m/%Y %H:%M') }}</small>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% if student.project %}
+{% set project = student.project %}
+{% set phases = project.get_phases_dict() %}
+
+<!-- Overall progress -->
+<div class="row g-3 mb-4">
+  <div class="col-md-4">
+    <div class="card border-0 shadow-sm text-center">
+      <div class="card-body">
+        <div class="display-4 fw-bold text-success">{{ project.get_overall_percentage() }}%</div>
+        <p class="text-muted mb-0">התקדמות כללית</p>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card border-0 shadow-sm text-center">
+      <div class="card-body">
+        <div class="display-4 fw-bold text-primary">{{ project.get_current_phase_display() }}</div>
+        <p class="text-muted mb-0">שלב נוכחי</p>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card border-0 shadow-sm text-center">
+      <div class="card-body">
+        {% if next_meeting %}
+        <div class="fs-5 fw-bold text-info">{{ next_meeting.scheduled_at.strftime('%d/%m/%Y') }}</div>
+        <div class="text-muted small">{{ next_meeting.scheduled_at.strftime('%H:%M') }}</div>
+        <p class="text-muted mb-0">פגישה קרובה</p>
+        {% else %}
+        <div class="fs-3 text-muted">—</div>
+        <p class="text-muted mb-0">אין פגישה קרובה</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Project info -->
+<div class="card shadow-sm mb-4">
+  <div class="card-header"><h6 class="mb-0">פרטי פרויקט</h6></div>
+  <div class="card-body">
+    <p><strong>שם:</strong> {{ project.title }}</p>
+    <p><strong>נושא:</strong> {{ project.subject }}</p>
+    {% if project.description %}
+    <p><strong>תיאור:</strong> {{ project.description }}</p>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Phase breakdown -->
+<div class="card shadow-sm mb-4">
+  <div class="card-header"><h6 class="mb-0">פירוט שלבים</h6></div>
+  <div class="card-body p-0">
+    <table class="table table-hover mb-0 align-middle">
+      <thead class="table-light">
+        <tr>
+          <th>שלב</th>
+          <th style="width:250px;">התקדמות</th>
+          <th style="width:60px;">%</th>
+          <th>הערות</th>
+          <th>עדכון אחרון</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for phase_key in phase_order %}
+        {% set pp = phases[phase_key] %}
+        {% set pct = pp.percentage if pp else 0 %}
+        <tr>
+          <td class="fw-semibold">{{ phase_display[phase_key] }}</td>
+          <td>
+            <div class="progress" style="height:10px;">
+              <div class="progress-bar {% if pct==100 %}bg-success{% elif pct>0 %}bg-primary{% else %}bg-secondary{% endif %}"
+                   style="width:{{ pct }}%;"></div>
+            </div>
+          </td>
+          <td class="fw-bold">{{ pct }}%</td>
+          <td><small class="text-muted">{{ pp.notes if pp and pp.notes else '—' }}</small></td>
+          <td><small class="text-muted">{{ pp.updated_at.strftime('%d/%m/%Y') if pp and pp.updated_at else '—' }}</small></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% else %}
+<div class="alert alert-warning">
+  <i class="bi bi-exclamation-triangle me-2"></i>לתלמיד זה אין פרויקט עדיין.
+  <a href="{{ url_for('teacher.student_project', student_id=student.id) }}" class="alert-link">הוסף פרויקט</a>
+</div>
+{% endif %}
+{% endblock %}

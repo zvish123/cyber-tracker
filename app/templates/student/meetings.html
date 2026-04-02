@@ -1,0 +1,75 @@
+{% extends 'base.html' %}
+{% block title %}הפגישות שלי{% endblock %}
+
+{% block content %}
+<h4 class="mb-3">
+  <i class="bi bi-calendar-event-fill text-primary me-2"></i>הפגישות שלי
+</h4>
+
+<!-- Upcoming meetings -->
+<h6 class="text-muted mb-2">פגישות קרובות</h6>
+{% if upcoming %}
+<div class="row g-3 mb-4">
+  {% for meeting in upcoming %}
+  <div class="col-md-6">
+    <div class="card shadow-sm border-start border-primary border-3">
+      <div class="card-body">
+        <h6 class="card-title">{{ meeting.title }}</h6>
+        <p class="mb-1 fw-semibold text-primary">
+          <i class="bi bi-calendar3 me-1"></i>
+          {{ meeting.scheduled_at.strftime('%d/%m/%Y') }}
+          <span class="ms-2">{{ meeting.scheduled_at.strftime('%H:%M') }}</span>
+        </p>
+        <p class="mb-1 text-muted small">
+          <i class="bi bi-hourglass-split me-1"></i>{{ meeting.duration_minutes }} דקות
+        </p>
+        {% if meeting.is_recurring %}
+        <span class="badge bg-info text-dark small">
+          {% if meeting.recurrence_type == 'weekly' %}פגישה שבועית
+          {% elif meeting.recurrence_type == 'biweekly' %}פגישה דו-שבועית
+          {% else %}פגישה חודשית{% endif %}
+        </span>
+        {% endif %}
+        {% if meeting.google_event_id %}
+        <div class="mt-2">
+          <small class="text-success"><i class="bi bi-google me-1"></i>מסונכרן ביומן Google</small>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="alert alert-info mb-4">אין פגישות קרובות מתוכננות</div>
+{% endif %}
+
+<!-- Past meetings -->
+{% if past %}
+<h6 class="text-muted mb-2">פגישות קודמות</h6>
+<div class="table-responsive">
+  <table class="table table-sm table-hover bg-white shadow-sm">
+    <thead class="table-light">
+      <tr>
+        <th>תאריך</th>
+        <th>נושא</th>
+        <th>סטטוס</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for meeting in past %}
+      <tr>
+        <td>{{ meeting.scheduled_at.strftime('%d/%m/%Y %H:%M') }}</td>
+        <td>{{ meeting.title }}</td>
+        <td>
+          {% if meeting.status == 'completed' %}<span class="badge bg-success">הושלם</span>
+          {% elif meeting.status == 'cancelled' %}<span class="badge bg-danger">בוטל</span>
+          {% else %}<span class="badge bg-secondary">עבר</span>{% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+{% endblock %}

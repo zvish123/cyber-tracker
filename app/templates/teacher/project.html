@@ -1,0 +1,279 @@
+{% extends 'base.html' %}
+{% block title %}{{ project.title }} — פרטי פרויקט{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="{{ url_for('teacher.dashboard') }}">לוח בקרה</a></li>
+    <li class="breadcrumb-item"><a href="{{ url_for('teacher.students') }}">תלמידים</a></li>
+    <li class="breadcrumb-item active">{{ project.title }}</li>
+  </ol>
+</nav>
+
+<!-- Project header -->
+<div class="card shadow-sm mb-4">
+  <div class="card-body">
+    <div class="d-flex justify-content-between align-items-start">
+      <div>
+        <h4 class="mb-1">{{ project.title }}</h4>
+        <span class="badge bg-info text-dark me-1">{{ project.subject }}</span>
+        <span class="badge bg-secondary">{{ project.student.user.full_name }}</span>
+        {% if project.student.class_name %}
+        <span class="badge bg-light text-dark border">{{ project.student.class_name }}</span>
+        {% endif %}
+        {% if project.description %}
+        <p class="text-muted mt-2 mb-0">{{ project.description }}</p>
+        {% endif %}
+      </div>
+      <div class="text-center">
+        <div class="display-5 fw-bold text-success" id="overall-pct">
+          {{ project.get_overall_percentage() }}%
+        </div>
+        <small class="text-muted">התקדמות כללית (משוקלל)</small>
+        {% set can_edit = current_user.is_admin or not project.student.teacher_id or project.student.teacher_id == current_user.id %}
+        {% if can_edit %}
+        <div class="d-flex gap-2 justify-content-center mt-2">
+          <button class="btn btn-sm btn-outline-primary"
+                  data-bs-toggle="modal" data-bs-target="#editProjectModal">
+            <i class="bi bi-pencil-fill"></i> ערוך
+          </button>
+          <form method="POST"
+                action="{{ url_for('teacher.delete_project', project_id=project.id) }}"
+                onsubmit="return confirm('למחוק את הפרויקט? פעולה זו אינה הפיכה.')">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn btn-sm btn-outline-danger">
+              <i class="bi bi-trash3"></i> מחק
+            </button>
+          </form>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Phases -->
+<div class="card shadow-sm mb-4">
+  <div class="card-header bg-dark text-white">
+    <h6 class="mb-0"><i class="bi bi-list-check me-2"></i>שלבי הפרויקט</h6>
+  </div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover mb-0 align-middle">
+        <thead class="table-light">
+          <tr>
+            <th>שלב</th>
+            <th style="width: 220px;">התקדמות</th>
+            <th style="width: 80px;">%</th>
+            <th>הערות</th>
+            <th style="width: 120px;">עדכון</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for phase_key in phase_order %}
+          {% set pp = phases_dict[phase_key] %}
+          <tr class="phase-row" data-phase="{{ phase_key }}">
+            <td>
+              <span class="fw-semibold">{{ phase_display[phase_key] }}</span>
+              {% if pp and pp.updated_at %}
+              <br><small class="text-muted">עודכן: {{ pp.updated_at.strftime('%d/%m/%Y') }}</small>
+              {% endif %}
+            </td>
+            <td>
+              {% set pct = pp.percentage if pp else 0 %}
+              <div class="progress" style="height: 12px;">
+                <div class="progress-bar {% if pct == 100 %}bg-success{% elif pct > 0 %}bg-primary{% else %}bg-secondary{% endif %}"
+                     style="width: {{ pct }}%;"
+                     aria-valuenow="{{ pct }}" aria-valuemin="0" aria-valuemax="100">
+                </div>
+              </div>
+            </td>
+            <td>
+              <span class="phase-percentage fw-bold">{{ pp.percentage if pp else 0 }}%</span>
+            </td>
+            <td>
+              <small class="text-muted">{{ pp.notes if pp and pp.notes else '—' }}</small>
+            </td>
+            <td>
+              <button class="btn btn-sm btn-outline-primary"
+                      data-bs-toggle="modal"
+                      data-bs-target="#updatePhaseModal"
+                      data-phase="{{ phase_key }}"
+                      data-phase-name="{{ phase_display[phase_key] }}"
+                      data-pct="{{ pp.percentage if pp else 0 }}"
+                      data-notes="{{ pp.notes if pp and pp.notes else '' }}">
+                <i class="bi bi-pencil-square"></i>
+              </button>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Upcoming meetings for this project -->
+{% if upcoming_meetings %}
+<div class="card shadow-sm mb-4">
+  <div class="card-header">
+    <h6 class="mb-0"><i class="bi bi-calendar-check me-2"></i>פגישות קרובות</h6>
+  </div>
+  <ul class="list-group list-group-flush">
+    {% for meeting in upcoming_meetings %}
+    <li class="list-group-item d-flex justify-content-between align-items-center">
+      <div>
+        <span class="fw-semibold">{{ meeting.title }}</span>
+        <small class="text-muted me-2">{{ meeting.scheduled_at.strftime('%d/%m/%Y %H:%M') }}</small>
+        <small class="text-muted">{{ meeting.duration_minutes }} דק׳</small>
+      </div>
+      {% if meeting.is_recurring %}
+      <span class="badge bg-info text-dark">חוזרת</span>
+      {% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+</div>
+{% endif %}
+
+<!-- Edit Project Modal -->
+<div class="modal fade" id="editProjectModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form method="POST" action="{{ url_for('teacher.edit_project', project_id=project.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="modal-header">
+          <h5 class="modal-title"><i class="bi bi-pencil-fill me-2"></i>עריכת פרטי פרויקט</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label fw-semibold">שם פרויקט *</label>
+            <input type="text" class="form-control" name="title"
+                   value="{{ project.title }}" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">נושא *</label>
+            <input type="text" class="form-control" name="subject"
+                   value="{{ project.subject }}" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">תיאור</label>
+            <textarea class="form-control" name="description" rows="3">{{ project.description or '' }}</textarea>
+          </div>
+          <!-- Phase weights -->
+          {% set proj_weights = project.get_phase_weights() %}
+          <div class="mb-2">
+            <label class="form-label fw-semibold">
+              משקלות שלבים
+              <small class="text-muted fw-normal">(סה"כ חייב להיות 100%)</small>
+            </label>
+            <div class="table-responsive">
+              <table class="table table-sm table-bordered align-middle mb-1">
+                <thead class="table-secondary">
+                  <tr>
+                    {% for phase in phase_order %}
+                    <th class="text-center small">{{ phase_display[phase] }}</th>
+                    {% endfor %}
+                    <th class="text-center">סה"כ</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    {% for phase in phase_order %}
+                    <td class="text-center">
+                      <div class="input-group input-group-sm">
+                        <input type="number" class="form-control edit-weight-input text-center"
+                               name="weight_{{ phase }}"
+                               value="{{ proj_weights.get(phase, 0) }}"
+                               min="0" max="100" step="1">
+                        <span class="input-group-text">%</span>
+                      </div>
+                    </td>
+                    {% endfor %}
+                    <td class="text-center fw-bold" id="edit-weight-total-cell">
+                      <span id="edit-weight-total"></span>%
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ביטול</button>
+          <button type="submit" class="btn btn-primary" id="editProjectSaveBtn">
+            <i class="bi bi-check-lg"></i> שמור שינויים
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Update Phase Modal -->
+<div class="modal fade" id="updatePhaseModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form method="POST" action="{{ url_for('teacher.update_phase', project_id=project.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="phase" id="modal-phase-key">
+        <div class="modal-header">
+          <h5 class="modal-title">עדכון שלב: <span id="modal-phase-name"></span></h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label fw-bold">אחוז השלמה: <span id="pct-display">0</span>%</label>
+            <input type="range" class="form-range" name="percentage" id="modal-percentage"
+                   min="0" max="100" step="5" value="0"
+                   oninput="document.getElementById('pct-display').textContent = this.value">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">הערות</label>
+            <textarea class="form-control" name="notes" id="modal-notes" rows="3"></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ביטול</button>
+          <button type="submit" class="btn btn-primary">
+            <i class="bi bi-check2"></i> עדכן
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Phase weights in edit modal
+const editWeightInputs = document.querySelectorAll('.edit-weight-input');
+const editWeightTotal  = document.getElementById('edit-weight-total');
+const editWeightCell   = document.getElementById('edit-weight-total-cell');
+const editSaveBtn      = document.getElementById('editProjectSaveBtn');
+if (editWeightInputs.length) {
+  function updateEditWeightTotal() {
+    const total = Array.from(editWeightInputs).reduce((s, i) => s + (parseInt(i.value) || 0), 0);
+    if (editWeightTotal) editWeightTotal.textContent = total;
+    const ok = total === 100;
+    if (editWeightCell) editWeightCell.className = 'text-center fw-bold ' + (ok ? 'text-success' : 'text-danger');
+    if (editSaveBtn) editSaveBtn.disabled = !ok;
+  }
+  editWeightInputs.forEach(i => i.addEventListener('input', updateEditWeightTotal));
+  updateEditWeightTotal();
+}
+
+const updateModal = document.getElementById('updatePhaseModal');
+updateModal.addEventListener('show.bs.modal', function(event) {
+  const btn = event.relatedTarget;
+  document.getElementById('modal-phase-key').value   = btn.dataset.phase;
+  document.getElementById('modal-phase-name').textContent = btn.dataset.phaseName;
+  const pct = parseInt(btn.dataset.pct) || 0;
+  document.getElementById('modal-percentage').value  = pct;
+  document.getElementById('pct-display').textContent = pct;
+  document.getElementById('modal-notes').value       = btn.dataset.notes || '';
+});
+</script>
+{% endblock %}

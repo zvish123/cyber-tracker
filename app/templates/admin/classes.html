@@ -1,0 +1,163 @@
+{% extends 'base.html' %}
+{% block title %}ניהול כיתות — מנהל מערכת{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h4 class="mb-0"><i class="bi bi-building-fill text-primary me-2"></i>ניהול שיוך מורים לכיתות</h4>
+</div>
+
+{% if classes %}
+<div class="table-responsive">
+  <table class="table table-hover bg-white shadow-sm rounded align-middle">
+    <thead class="table-dark">
+      <tr>
+        <th>כיתה</th>
+        <th>שנה</th>
+        <th>מורה ראשי</th>
+        <th>מורים נוספים</th>
+        <th>תלמידים</th>
+        <th>פעולות</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for cls in classes %}
+      <tr>
+        <td class="fw-semibold">{{ cls.name }}</td>
+        <td>{{ cls.year }}</td>
+
+        <!-- Primary teacher + reassign -->
+        <td>
+          <div class="d-flex align-items-center gap-2">
+            <span class="badge bg-primary">{{ cls.teacher.full_name }}</span>
+            <button class="btn btn-outline-secondary btn-sm" title="שנה מורה ראשי"
+                    data-bs-toggle="modal" data-bs-target="#setTeacherModal"
+                    data-class-id="{{ cls.id }}"
+                    data-class-name="{{ cls.display_name }}"
+                    data-current-teacher="{{ cls.teacher_id }}">
+              <i class="bi bi-arrow-repeat"></i>
+            </button>
+          </div>
+        </td>
+
+        <!-- Co-teachers + add -->
+        <td>
+          <div class="d-flex flex-wrap gap-1 align-items-center">
+            {% for t in cls.extra_teachers %}
+            <span class="badge bg-secondary d-flex align-items-center gap-1">
+              {{ t.full_name }}
+              <form method="POST"
+                    action="{{ url_for('admin.remove_class_teacher', class_id=cls.id, teacher_id=t.id) }}"
+                    class="d-inline"
+                    onsubmit="return confirm('להסיר את {{ t.full_name }} מכיתה {{ cls.display_name }}?')">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn-close btn-close-white ms-1"
+                        style="font-size:.6rem;" title="הסר"></button>
+              </form>
+            </span>
+            {% endfor %}
+            <button class="btn btn-outline-success btn-sm" title="הוסף מורה"
+                    data-bs-toggle="modal" data-bs-target="#addTeacherModal"
+                    data-class-id="{{ cls.id }}"
+                    data-class-name="{{ cls.display_name }}">
+              <i class="bi bi-person-plus-fill"></i>
+            </button>
+          </div>
+        </td>
+
+        <td><span class="badge bg-info text-dark">{{ cls.students|length }}</span></td>
+        <td>
+          <a href="{{ url_for('teacher.dashboard', class_id=cls.id) }}"
+             class="btn btn-outline-primary btn-sm" title="לוח בקרה">
+            <i class="bi bi-grid-3x3-gap-fill"></i>
+          </a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="text-center py-5">
+  <i class="bi bi-building display-1 text-muted"></i>
+  <h5 class="mt-3 text-muted">אין כיתות במערכת עדיין</h5>
+</div>
+{% endif %}
+
+<!-- Reassign primary teacher modal -->
+<div class="modal fade" id="setTeacherModal" tabindex="-1">
+  <div class="modal-dialog modal-sm">
+    <div class="modal-content">
+      <form method="POST" id="setTeacherForm">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="modal-header">
+          <h6 class="modal-title">שינוי מורה ראשי — <span id="st-class-name"></span></h6>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <label class="form-label fw-semibold">בחר מורה ראשי חדש</label>
+          <select class="form-select" name="teacher_id" id="st-teacher-select" required>
+            {% for t in all_teachers %}
+            <option value="{{ t.id }}">{{ t.full_name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ביטול</button>
+          <button type="submit" class="btn btn-primary">
+            <i class="bi bi-check-lg"></i> שמור
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Add co-teacher modal -->
+<div class="modal fade" id="addTeacherModal" tabindex="-1">
+  <div class="modal-dialog modal-sm">
+    <div class="modal-content">
+      <form method="POST" id="addTeacherForm">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="modal-header">
+          <h6 class="modal-title">הוסף מורה לכיתה — <span id="at-class-name"></span></h6>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <label class="form-label fw-semibold">בחר מורה להוספה</label>
+          <select class="form-select" name="teacher_id" required>
+            {% for t in all_teachers %}
+            <option value="{{ t.id }}">{{ t.full_name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ביטול</button>
+          <button type="submit" class="btn btn-success">
+            <i class="bi bi-person-plus-fill"></i> הוסף
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('setTeacherModal').addEventListener('show.bs.modal', function(e) {
+  const btn = e.relatedTarget;
+  document.getElementById('st-class-name').textContent = btn.dataset.className;
+  document.getElementById('setTeacherForm').action =
+    `/admin/classes/${btn.dataset.classId}/set-teacher`;
+  const sel = document.getElementById('st-teacher-select');
+  sel.value = btn.dataset.currentTeacher;
+});
+
+document.getElementById('addTeacherModal').addEventListener('show.bs.modal', function(e) {
+  const btn = e.relatedTarget;
+  document.getElementById('at-class-name').textContent = btn.dataset.className;
+  document.getElementById('addTeacherForm').action =
+    `/admin/classes/${btn.dataset.classId}/add-teacher`;
+});
+</script>
+{% endblock %}

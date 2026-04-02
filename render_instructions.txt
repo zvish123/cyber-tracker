@@ -1,0 +1,37 @@
+Steps in the Render dashboard:
+
+  1. Go to your Render dashboard and open your web service (the cyber-tracker app)
+  2. In the left sidebar click Environment
+  3. You'll see an Environment Variables section with two columns: KEY and VALUE
+  4. Click Add Environment Variable and enter each pair:
+
+  ┌──────────────────────┬────────────────────────────────────────────────────────────────────────────────────────────────────┐
+  │         KEY          │                                               VALUE                                                │
+  ├──────────────────────┼────────────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ SECRET_KEY           │ a long random string (e.g. generate with python -c "import secrets; print(secrets.token_hex(32))") │
+  ├──────────────────────┼────────────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ MAIL_SERVER          │ smtp.gmail.com                                                                                     │
+  ├──────────────────────┼────────────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ MAIL_PORT            │ 587                                                                                                │
+  ├──────────────────────┼────────────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ MAIL_USERNAME        │ zvish123@gmail.com                                                                                 │
+  ├──────────────────────┼────────────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ MAIL_PASSWORD        │ your Gmail app password                                                                            │
+  ├──────────────────────┼────────────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ GOOGLE_CLIENT_ID     │ your Google OAuth client ID                                                                        │
+  ├──────────────────────┼────────────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ GOOGLE_CLIENT_SECRET │ your Google OAuth secret                                                                           │
+  ├──────────────────────┼────────────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ GOOGLE_REDIRECT_URI  │ https://your-app-name.onrender.com/teacher/google/callback                                         │
+  ├──────────────────────┼────────────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ FLASK_ENV            │ production                                                                                         │
+  └──────────────────────┴────────────────────────────────────────────────────────────────────────────────────────────────────┘
+
+  5. Click Save Changes — Render will automatically redeploy with the new values
+
+  Important notes:
+
+  - OAUTHLIB_INSECURE_TRANSPORT — do not set this on Render. It's only for local dev (allows HTTP). On Render you use HTTPS so it's not needed.
+  - DATABASE_URL — if you're using SQLite (the default), you don't need to set this. If you upgrade to PostgreSQL, Render sets it automatically when you attach a database.
+  - Gmail app password: Gmail requires a dedicated "App Password" (not your regular login password). Generate one at myaccount.google.com → Security → 2-Step Verification → App passwords.
+  - After saving, check the Logs tab to confirm the app restarted without errors.

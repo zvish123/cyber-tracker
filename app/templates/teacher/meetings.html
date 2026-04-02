@@ -1,0 +1,220 @@
+{% extends 'base.html' %}
+{% block title %}פגישות{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h4 class="mb-0"><i class="bi bi-calendar-event-fill text-primary me-2"></i>ניהול פגישות</h4>
+  <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#scheduleMeetingModal">
+    <i class="bi bi-calendar-plus"></i> קבע פגישה
+  </button>
+</div>
+
+<!-- Google Calendar status -->
+{% if not current_user.google_credentials %}
+<div class="alert alert-warning d-flex align-items-center gap-2">
+  <i class="bi bi-google fs-5"></i>
+  <div>
+    Google Calendar אינו מחובר —
+    <a href="{{ url_for('teacher.google_auth') }}" class="fw-bold">חבר עכשיו</a>
+    כדי לסנכרן פגישות אוטומטית.
+  </div>
+</div>
+{% endif %}
+
+<!-- Upcoming meetings -->
+<h6 class="text-muted mb-2">פגישות קרובות</h6>
+{% if upcoming %}
+<div class="row g-3 mb-4">
+  {% for meeting in upcoming %}
+  <div class="col-md-6 col-lg-4">
+    <div class="card shadow-sm h-100 border-start border-primary border-3">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-start">
+          <h6 class="card-title mb-1">{{ meeting.title }}</h6>
+          {% if meeting.is_recurring %}
+          <span class="badge bg-info text-dark">
+            {% if meeting.recurrence_type == 'weekly' %}שבועי
+            {% elif meeting.recurrence_type == 'biweekly' %}דו-שבועי
+            {% else %}חודשי{% endif %}
+          </span>
+          {% endif %}
+        </div>
+        <p class="mb-1">
+          <i class="bi bi-person-fill text-muted me-1"></i>
+          <strong>{{ meeting.student.user.full_name }}</strong>
+        </p>
+        <p class="mb-1 text-primary fw-semibold">
+          <i class="bi bi-clock me-1"></i>
+          {{ meeting.scheduled_at.strftime('%d/%m/%Y %H:%M') }}
+        </p>
+        <p class="mb-2 text-muted small">
+          <i class="bi bi-hourglass-split me-1"></i>{{ meeting.duration_minutes }} דקות
+          {% if meeting.google_event_id %}
+          <span class="ms-2 text-success"><i class="bi bi-google"></i> מסונכרן</span>
+          {% endif %}
+        </p>
+        <div class="d-flex gap-2">
+          <a href="{{ url_for('teacher.reschedule_meeting', meeting_id=meeting.id) }}"
+             class="btn btn-sm btn-outline-warning">
+            <i class="bi bi-calendar-range"></i> דחה
+          </a>
+          <form method="POST"
+                action="{{ url_for('teacher.cancel_meeting', meeting_id=meeting.id) }}"
+                onsubmit="return confirm('לבטל את הפגישה?')">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn btn-sm btn-outline-danger">
+              <i class="bi bi-x-circle"></i> בטל
+            </button>
+          </form>
+          <form method="POST"
+                action="{{ url_for('teacher.complete_meeting', meeting_id=meeting.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn btn-sm btn-outline-success">
+              <i class="bi bi-check2-circle"></i> הושלם
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="alert alert-info">אין פגישות קרובות</div>
+{% endif %}
+
+<!-- Past meetings -->
+{% if past %}
+<h6 class="text-muted mb-2">פגישות אחרונות</h6>
+<div class="table-responsive">
+  <table class="table table-sm table-hover bg-white shadow-sm align-middle">
+    <thead class="table-light">
+      <tr>
+        <th>תאריך</th>
+        <th>תלמיד</th>
+        <th>נושא</th>
+        <th>סטטוס</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for meeting in past %}
+      <tr>
+        <td>{{ meeting.scheduled_at.strftime('%d/%m/%Y %H:%M') }}</td>
+        <td>{{ meeting.student.user.full_name }}</td>
+        <td>{{ meeting.title }}</td>
+        <td>
+          {% if meeting.status == 'completed' %}
+          <span class="badge bg-success">הושלם</span>
+          {% elif meeting.status == 'cancelled' %}
+          <span class="badge bg-danger">בוטל</span>
+          {% else %}
+          <span class="badge bg-secondary">עבר</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+
+<!-- Schedule Meeting Modal -->
+<div class="modal fade" id="scheduleMeetingModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <form method="POST" action="{{ url_for('teacher.schedule_meeting') }}" id="scheduleForm">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="modal-header bg-primary text-white">
+          <h5 class="modal-title"><i class="bi bi-calendar-plus me-2"></i>קביעת פגישה חדשה</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label fw-bold">תלמיד *</label>
+              <select class="form-select" name="student_id" id="meetingStudentSelect" required>
+                <option value="">-- בחר תלמיד --</option>
+                {% for student in students %}
+                <option value="{{ student.id }}"
+                        data-project-id="{{ student.project.id if student.project else '' }}"
+                        data-project-title="{{ student.project.title if student.project else '' }}">
+                  {{ student.user.full_name }}
+                </option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-bold">פרויקט</label>
+              <input type="hidden" name="project_id" id="meetingProjectId">
+              <input type="text" class="form-control" id="meetingProjectDisplay"
+                     readonly placeholder="ייבחר אוטומטית">
+            </div>
+            <div class="col-12">
+              <label class="form-label fw-bold">נושא הפגישה *</label>
+              <input type="text" class="form-control" name="title" required
+                     placeholder="פגישת מעקב — שלב פתיחה">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-bold">תאריך ושעה *</label>
+              <input type="datetime-local" class="form-control" name="scheduled_at" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-bold">משך (דקות)</label>
+              <select class="form-select" name="duration_minutes">
+                <option value="15">15 דקות</option>
+                <option value="30" selected>30 דקות</option>
+                <option value="45">45 דקות</option>
+                <option value="60">שעה</option>
+                <option value="90">שעה וחצי</option>
+              </select>
+            </div>
+            <div class="col-12">
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="isRecurring" name="is_recurring">
+                <label class="form-check-label" for="isRecurring">פגישה חוזרת</label>
+              </div>
+            </div>
+            <div class="col-md-6 d-none" id="recurrenceFields">
+              <label class="form-label">תדירות</label>
+              <select class="form-select" name="recurrence_type">
+                <option value="weekly">שבועי</option>
+                <option value="biweekly">דו-שבועי</option>
+                <option value="monthly">חודשי</option>
+              </select>
+            </div>
+            <div class="col-md-6 d-none" id="recurrenceEndField">
+              <label class="form-label">תאריך סיום חזרה</label>
+              <input type="date" class="form-control" name="recurrence_end_date">
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ביטול</button>
+          <button type="submit" class="btn btn-primary">
+            <i class="bi bi-calendar-check"></i> קבע פגישה
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Auto-fill project when student selected
+document.getElementById('meetingStudentSelect').addEventListener('change', function() {
+  const opt = this.options[this.selectedIndex];
+  document.getElementById('meetingProjectId').value      = opt.dataset.projectId || '';
+  document.getElementById('meetingProjectDisplay').value = opt.dataset.projectTitle || '';
+});
+
+// Toggle recurring fields
+document.getElementById('isRecurring').addEventListener('change', function() {
+  const show = this.checked;
+  document.getElementById('recurrenceFields').classList.toggle('d-none', !show);
+  document.getElementById('recurrenceEndField').classList.toggle('d-none', !show);
+});
+</script>
+{% endblock %}

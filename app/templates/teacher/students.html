@@ -1,0 +1,228 @@
+{% extends 'base.html' %}
+{% block title %}ניהול תלמידים{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h4 class="mb-0"><i class="bi bi-people-fill text-primary me-2"></i>ניהול תלמידים</h4>
+  <div class="d-flex gap-2">
+    {% if classes or current_user.is_admin %}
+    <a href="{{ url_for('teacher.import_students') }}" class="btn btn-outline-success">
+      <i class="bi bi-file-earmark-arrow-up-fill"></i> ייבוא מ-Excel
+    </a>
+    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addStudentModal">
+      <i class="bi bi-person-plus-fill"></i> הוסף תלמיד
+    </button>
+    {% else %}
+    <a href="{{ url_for('teacher.classes') }}" class="btn btn-warning">
+      <i class="bi bi-plus-circle-fill"></i> צור כיתה ראשונה
+    </a>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Class filter -->
+{% if classes %}
+<div class="btn-group mb-3 flex-wrap">
+  {% if current_user.is_admin %}
+  <a href="{{ url_for('teacher.students') }}"
+     class="btn btn-sm {% if not selected_class_id %}btn-dark{% else %}btn-outline-dark{% endif %}">
+    הכל
+  </a>
+  {% endif %}
+  {% for cls in classes %}
+  <a href="{{ url_for('teacher.students', class_id=cls.id) }}"
+     class="btn btn-sm {% if selected_class_id == cls.id %}btn-primary{% else %}btn-outline-primary{% endif %}">
+    {{ cls.display_name }}
+  </a>
+  {% endfor %}
+</div>
+{% endif %}
+
+{% if students %}
+<div class="table-responsive">
+  <table class="table table-hover bg-white shadow-sm rounded align-middle">
+    <thead class="table-dark">
+      <tr>
+        <th>שם מלא</th>
+        <th>שם משתמש</th>
+        <th>אימייל</th>
+        <th>כיתה</th>
+        <th>פרויקט</th>
+        <th>פעולות</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for student in students %}
+      <tr>
+        <td class="fw-semibold">{{ student.user.full_name }}</td>
+        <td><code>{{ student.user.username }}</code></td>
+        <td><a href="mailto:{{ student.user.email }}">{{ student.user.email }}</a></td>
+        <td>{{ student.class_group.display_name if student.class_group else (student.class_name or '—') }}</td>
+        <td>
+          {% if student.project %}
+          <a href="{{ url_for('teacher.project_detail', project_id=student.project.id) }}"
+             class="badge bg-success text-decoration-none">{{ student.project.title }}</a>
+          {% else %}
+          <a href="{{ url_for('teacher.student_project', student_id=student.id) }}"
+             class="badge bg-warning text-dark text-decoration-none">
+            <i class="bi bi-plus-circle"></i> הוסף פרויקט
+          </a>
+          {% endif %}
+        </td>
+        {% set can_edit = current_user.is_admin or not student.teacher_id or student.teacher_id == current_user.id %}
+        <td>
+          <div class="btn-group btn-group-sm">
+            <a href="{{ url_for('teacher.student_report', student_id=student.id) }}"
+               class="btn btn-outline-secondary" title="דוח תלמיד">
+              <i class="bi bi-file-earmark-text"></i>
+            </a>
+            {% if can_edit %}
+            <button type="button" class="btn btn-outline-primary" title="עריכה"
+                    data-bs-toggle="modal" data-bs-target="#editStudentModal"
+                    data-student-id="{{ student.id }}"
+                    data-full-name="{{ student.user.full_name }}"
+                    data-username="{{ student.user.username }}"
+                    data-email="{{ student.user.email }}"
+                    data-class-group-id="{{ student.class_group_id or '' }}">
+              <i class="bi bi-pencil-fill"></i>
+            </button>
+            <form method="POST"
+                  action="{{ url_for('teacher.delete_student', student_id=student.id) }}"
+                  onsubmit="return confirm('האם למחוק את {{ student.user.full_name }}? פעולה זו אינה הפיכה.')">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button type="submit" class="btn btn-outline-danger" title="הסר תלמיד">
+                <i class="bi bi-trash3"></i>
+              </button>
+            </form>
+            {% endif %}
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="text-center py-5">
+  <i class="bi bi-people display-1 text-muted"></i>
+  <h5 class="mt-3 text-muted">אין תלמידים עדיין</h5>
+</div>
+{% endif %}
+
+<!-- Add Student Modal -->
+<div class="modal fade" id="addStudentModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form method="POST" action="{{ url_for('teacher.add_student') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="modal-header">
+          <h5 class="modal-title">הוספת תלמיד חדש</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label">שם מלא *</label>
+              <input type="text" class="form-control" name="full_name" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">כיתה</label>
+              <select class="form-select" name="class_group_id">
+                <option value="">— ללא כיתה —</option>
+                {% for cls in classes %}
+                <option value="{{ cls.id }}">{{ cls.display_name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">שם משתמש *</label>
+              <input type="text" class="form-control" name="username" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">אימייל *</label>
+              <input type="email" class="form-control" name="email" required>
+            </div>
+            <div class="col-12">
+              <label class="form-label">סיסמה ראשונית *</label>
+              <input type="text" class="form-control" name="password" required
+                     placeholder="הסיסמה תועבר לתלמיד">
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ביטול</button>
+          <button type="submit" class="btn btn-primary">
+            <i class="bi bi-person-plus-fill"></i> הוסף תלמיד
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Student Modal -->
+<div class="modal fade" id="editStudentModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form method="POST" id="editStudentForm">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="modal-header">
+          <h5 class="modal-title">עריכת פרטי תלמיד</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label">שם מלא *</label>
+              <input type="text" class="form-control" name="full_name" id="edit_full_name" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">כיתה</label>
+              <select class="form-select" name="class_group_id" id="edit_class_group_id">
+                <option value="">— ללא כיתה —</option>
+                {% for cls in classes %}
+                <option value="{{ cls.id }}">{{ cls.display_name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">שם משתמש *</label>
+              <input type="text" class="form-control" name="username" id="edit_username" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">אימייל *</label>
+              <input type="email" class="form-control" name="email" id="edit_email" required>
+            </div>
+            <div class="col-12">
+              <label class="form-label">סיסמה חדשה <small class="text-muted">(השאר ריק לאי-שינוי)</small></label>
+              <input type="text" class="form-control" name="password" placeholder="••••••••">
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ביטול</button>
+          <button type="submit" class="btn btn-primary">
+            <i class="bi bi-check-lg"></i> שמור שינויים
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+{% block scripts %}
+<script>
+document.getElementById('editStudentModal').addEventListener('show.bs.modal', function (e) {
+  const btn = e.relatedTarget;
+  const studentId = btn.dataset.studentId;
+  const form = document.getElementById('editStudentForm');
+  form.action = `/teacher/students/${studentId}/edit`;
+  document.getElementById('edit_full_name').value = btn.dataset.fullName;
+  document.getElementById('edit_username').value  = btn.dataset.username;
+  document.getElementById('edit_email').value     = btn.dataset.email;
+  const sel = document.getElementById('edit_class_group_id');
+  sel.value = btn.dataset.classGroupId || '';
+});
+</script>
+{% endblock %}
+{% endblock %}

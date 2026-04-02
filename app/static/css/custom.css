@@ -1,0 +1,61 @@
+/* ── Cyber Tracker — Custom Styles ── */
+
+body {
+  font-family: 'Segoe UI', Arial, sans-serif;
+}
+
+/* Avatar circle for student initials */
+.avatar-circle {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 0.9rem;
+  flex-shrink: 0;
+}
+
+/* Phase progress bar rows */
+.phase-row .progress {
+  border-radius: 6px;
+}
+
+/* Smooth table row flash */
+tr.table-warning {
+  transition: background-color 0.3s ease;
+}
+
+/* Card hover shadow */
+.card:hover {
+  box-shadow: 0 4px 16px rgba(0,0,0,0.12) !important;
+  transition: box-shadow 0.2s ease;
+}
+
+/* Sidebar nav active */
+.navbar .nav-link.fw-bold {
+  border-bottom: 2px solid #0d6efd;
+}
+
+/* Responsive table on small screens */
+@media (max-width: 768px) {
+  .table-responsive table {
+    font-size: 0.82rem;
+  }
+}
+
+/* Meeting cards */
+.border-start.border-primary { border-color: #0d6efd !important; }
+.border-start.border-warning { border-color: #ffc107 !important; }
+
+/* Smooth progress animation on load */
+.progress-bar {
+  transition: width 0.6s ease-in-out;
+}
+
+/* Print styles for reports */
+@media print {
+  .navbar, .btn, .alert-dismissible .btn-close { display: none !important; }
+  .card { box-shadow: none !important; border: 1px solid #ccc; }
+}

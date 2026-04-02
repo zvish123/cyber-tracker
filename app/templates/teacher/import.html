@@ -1,0 +1,91 @@
+{% extends 'base.html' %}
+{% block title %}ייבוא תלמידים מ-Excel{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h4 class="mb-0"><i class="bi bi-file-earmark-arrow-up-fill text-success me-2"></i>ייבוא תלמידים מ-Excel</h4>
+  <a href="{{ url_for('teacher.download_template') }}" class="btn btn-outline-success btn-sm">
+    <i class="bi bi-download"></i> הורד תבנית Excel
+  </a>
+</div>
+
+<div class="card shadow-sm mb-4">
+  <div class="card-body">
+    <p class="text-muted mb-3">
+      הורד את תבנית ה-Excel, מלא את פרטי התלמידים, ולאחר מכן העלה את הקובץ המלא.
+    </p>
+    <form method="POST" enctype="multipart/form-data" action="{{ url_for('teacher.import_students') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="mb-3">
+        <label class="form-label fw-semibold">קובץ Excel (.xlsx) *</label>
+        <input type="file" class="form-control" name="excel_file" accept=".xlsx" required>
+      </div>
+      <button type="submit" class="btn btn-success">
+        <i class="bi bi-cloud-upload-fill"></i> ייבא תלמידים
+      </button>
+    </form>
+  </div>
+</div>
+
+{% if done %}
+<!-- Results -->
+<div class="row g-3 mb-4">
+  <div class="col-md-6">
+    <div class="card border-success shadow-sm">
+      <div class="card-body text-center">
+        <h2 class="display-5 fw-bold text-success">{{ imported|length }}</h2>
+        <p class="mb-0">תלמידים יובאו בהצלחה</p>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-6">
+    <div class="card border-danger shadow-sm">
+      <div class="card-body text-center">
+        <h2 class="display-5 fw-bold text-danger">{{ errors|length }}</h2>
+        <p class="mb-0">שגיאות / דילוגים</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% if imported %}
+<h5 class="fw-semibold mb-2"><i class="bi bi-check-circle-fill text-success me-1"></i>יובאו בהצלחה</h5>
+<div class="table-responsive mb-4">
+  <table class="table table-sm table-hover bg-white shadow-sm rounded">
+    <thead class="table-success">
+      <tr><th>שורה</th><th>שם משתמש</th><th>שם מלא</th></tr>
+    </thead>
+    <tbody>
+      {% for r in imported %}
+      <tr>
+        <td>{{ r.row }}</td>
+        <td><code>{{ r.username }}</code></td>
+        <td>{{ r.full_name }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+{% if errors %}
+<h5 class="fw-semibold mb-2"><i class="bi bi-exclamation-triangle-fill text-danger me-1"></i>שגיאות</h5>
+<div class="table-responsive mb-4">
+  <table class="table table-sm table-hover bg-white shadow-sm rounded">
+    <thead class="table-danger">
+      <tr><th>שורה</th><th>שם משתמש</th><th>סיבה</th></tr>
+    </thead>
+    <tbody>
+      {% for e in errors %}
+      <tr>
+        <td>{{ e.row }}</td>
+        <td><code>{{ e.username }}</code></td>
+        <td>{{ e.reason }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+{% endif %}
+{% endblock %}

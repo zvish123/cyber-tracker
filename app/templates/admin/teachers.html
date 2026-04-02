@@ -1,0 +1,186 @@
+{% extends 'base.html' %}
+{% block title %}ניהול מורים — מנהל מערכת{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h4 class="mb-0"><i class="bi bi-people-fill text-primary me-2"></i>ניהול מורים</h4>
+  <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addTeacherModal">
+    <i class="bi bi-person-plus-fill"></i> הוסף מורה
+  </button>
+</div>
+
+<div class="table-responsive">
+  <table class="table table-hover bg-white shadow-sm rounded align-middle">
+    <thead class="table-dark">
+      <tr>
+        <th>שם מלא</th>
+        <th>שם משתמש</th>
+        <th>אימייל</th>
+        <th>תפקיד</th>
+        <th>סטטוס</th>
+        <th>תלמידים</th>
+        <th>פעולות</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for t in teachers %}
+      <tr class="{% if not t.is_active %}table-secondary text-muted{% endif %}">
+        <td class="fw-semibold">{{ t.full_name }}</td>
+        <td><code>{{ t.username }}</code></td>
+        <td><a href="mailto:{{ t.email }}">{{ t.email }}</a></td>
+        <td>
+          {% if t.role == 'admin' %}
+          <span class="badge bg-warning text-dark">מנהל מערכת</span>
+          {% else %}
+          <span class="badge bg-primary">מורה</span>
+          {% endif %}
+        </td>
+        <td>
+          {% if t.is_active %}
+          <span class="badge bg-success">פעיל</span>
+          {% else %}
+          <span class="badge bg-danger">מושבת</span>
+          {% endif %}
+        </td>
+        <td>
+          <span class="badge bg-secondary">{{ t.students_taught|length }}</span>
+        </td>
+        <td>
+          <div class="btn-group btn-group-sm">
+            {% if t.id != current_user.id %}
+            <!-- Edit -->
+            <button type="button" class="btn btn-outline-primary btn-sm" title="עריכה"
+                    data-bs-toggle="modal" data-bs-target="#editTeacherModal"
+                    data-teacher-id="{{ t.id }}"
+                    data-full-name="{{ t.full_name }}"
+                    data-email="{{ t.email }}">
+              <i class="bi bi-pencil-fill"></i>
+            </button>
+            <!-- Toggle active -->
+            <form method="POST" action="{{ url_for('admin.toggle_teacher', teacher_id=t.id) }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button type="submit"
+                      class="btn {% if t.is_active %}btn-outline-warning{% else %}btn-outline-success{% endif %}"
+                      title="{{ 'השבת' if t.is_active else 'הפעל' }}"
+                      onclick="return confirm('{{ 'להשבית' if t.is_active else 'להפעיל' }} את {{ t.full_name }}?')">
+                <i class="bi {% if t.is_active %}bi-pause-circle{% else %}bi-play-circle{% endif %}"></i>
+              </button>
+            </form>
+            <!-- Promote/demote -->
+            <form method="POST" action="{{ url_for('admin.promote_teacher', teacher_id=t.id) }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button type="submit"
+                      class="btn {% if t.role == 'admin' %}btn-outline-secondary{% else %}btn-outline-warning{% endif %}"
+                      title="{{ 'הורד לתפקיד מורה' if t.role == 'admin' else 'קדם למנהל מערכת' }}"
+                      onclick="return confirm('לשנות תפקיד של {{ t.full_name }}?')">
+                <i class="bi {% if t.role == 'admin' %}bi-person-down{% else %}bi-person-up{% endif %}"></i>
+              </button>
+            </form>
+            {% else %}
+            <span class="text-muted small">(חשבונך)</span>
+            {% endif %}
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- Edit Teacher Modal -->
+<div class="modal fade" id="editTeacherModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form method="POST" id="editTeacherForm">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="modal-header">
+          <h5 class="modal-title">עריכת פרטי מורה</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="row g-3">
+            <div class="col-12">
+              <label class="form-label fw-semibold">שם מלא *</label>
+              <input type="text" class="form-control" name="full_name"
+                     id="edit_teacher_full_name" required>
+            </div>
+            <div class="col-12">
+              <label class="form-label fw-semibold">אימייל *</label>
+              <input type="email" class="form-control" name="email"
+                     id="edit_teacher_email" required>
+            </div>
+            <div class="col-12">
+              <label class="form-label fw-semibold">
+                סיסמה חדשה
+                <small class="text-muted fw-normal">(השאר ריק לאי-שינוי)</small>
+              </label>
+              <input type="text" class="form-control" name="password"
+                     placeholder="לפחות 6 תווים">
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ביטול</button>
+          <button type="submit" class="btn btn-primary">
+            <i class="bi bi-check-lg"></i> שמור שינויים
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Add Teacher Modal -->
+<div class="modal fade" id="addTeacherModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form method="POST" action="{{ url_for('admin.add_teacher') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="modal-header">
+          <h5 class="modal-title">הוספת מורה חדש/ת</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label">שם מלא *</label>
+              <input type="text" class="form-control" name="full_name" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">שם משתמש *</label>
+              <input type="text" class="form-control" name="username" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">אימייל *</label>
+              <input type="email" class="form-control" name="email" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">סיסמה ראשונית *</label>
+              <input type="text" class="form-control" name="password" required>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ביטול</button>
+          <button type="submit" class="btn btn-primary">
+            <i class="bi bi-person-plus-fill"></i> הוסף מורה
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+{% block scripts %}
+<script>
+document.getElementById('editTeacherModal').addEventListener('show.bs.modal', function(e) {
+  const btn = e.relatedTarget;
+  const form = document.getElementById('editTeacherForm');
+  form.action = `/admin/teachers/${btn.dataset.teacherId}/edit`;
+  document.getElementById('edit_teacher_full_name').value = btn.dataset.fullName;
+  document.getElementById('edit_teacher_email').value     = btn.dataset.email;
+  form.querySelector('[name=password]').value = '';
+});
+</script>
+{% endblock %}
+{% endblock %}

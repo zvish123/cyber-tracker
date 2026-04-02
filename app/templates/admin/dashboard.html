@@ -1,0 +1,73 @@
+{% extends 'base.html' %}
+{% block title %}לוח בקרה — מנהל מערכת{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h4 class="mb-0">
+    <i class="bi bi-gear-fill text-warning me-2"></i>לוח בקרה — מנהל מערכת
+  </h4>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-md-3">
+    <div class="card border-0 shadow-sm text-center bg-white">
+      <div class="card-body">
+        <h2 class="display-5 fw-bold text-primary">{{ teacher_count }}</h2>
+        <p class="text-muted mb-0">מורים</p>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card border-0 shadow-sm text-center bg-white">
+      <div class="card-body">
+        <h2 class="display-5 fw-bold text-success">{{ student_count }}</h2>
+        <p class="text-muted mb-0">תלמידים</p>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card border-0 shadow-sm text-center bg-white">
+      <div class="card-body">
+        <h2 class="display-5 fw-bold text-info">{{ project_count }}</h2>
+        <p class="text-muted mb-0">פרויקטים</p>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card border-0 shadow-sm text-center bg-white">
+      <div class="card-body">
+        <h2 class="display-5 fw-bold {% if inactive_count > 0 %}text-danger{% else %}text-secondary{% endif %}">
+          {{ inactive_count }}
+        </h2>
+        <p class="text-muted mb-0">חשבונות מושבתים</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-md-6">
+    <div class="card shadow-sm h-100">
+      <div class="card-body d-flex flex-column gap-2">
+        <h6 class="fw-bold mb-3"><i class="bi bi-people-fill me-2 text-primary"></i>ניהול מורים</h6>
+        <a href="{{ url_for('admin.teachers') }}" class="btn btn-outline-primary">
+          <i class="bi bi-person-lines-fill"></i> הצג וניהול מורים
+        </a>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-6">
+    <div class="card shadow-sm h-100">
+      <div class="card-body d-flex flex-column gap-2">
+        <h6 class="fw-bold mb-3"><i class="bi bi-sliders me-2 text-warning"></i>הגדרות מערכת</h6>
+        <a href="{{ url_for('admin.classes') }}" class="btn btn-outline-primary">
+          <i class="bi bi-building-fill"></i> שיוך מורים לכיתות
+        </a>
+        <a href="{{ url_for('admin.settings') }}" class="btn btn-outline-warning">
+          <i class="bi bi-sliders"></i> משקלות שלבי פרויקט
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

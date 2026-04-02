@@ -1,0 +1,30 @@
+services:
+  - type: web
+    name: cyber-tracker
+    env: python
+    region: frankfurt   # closest to Israel
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn --worker-class eventlet -w 1 "run:app"
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DATABASE_URL
+        value: sqlite:///tracker.db
+      - key: FLASK_ENV
+        value: production
+      - key: MAIL_SERVER
+        sync: false
+      - key: MAIL_PORT
+        value: "587"
+      - key: MAIL_USERNAME
+        sync: false
+      - key: MAIL_PASSWORD
+        sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: GOOGLE_REDIRECT_URI
+        sync: false
+      - key: APP_BASE_URL
+        sync: false

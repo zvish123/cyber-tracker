@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<body style="font-family: Arial, sans-serif; direction: rtl; text-align: right; background: #f8f9fa; padding: 20px;">
+<div style="max-width: 500px; margin: auto; background: white; border-radius: 8px; padding: 24px; border: 1px solid #dee2e6;">
+  <h2 style="color: #0d6efd;">📅 פגישה נקבעה</h2>
+  <p>שלום {{ student.full_name }},</p>
+  <p>פגישת מעקב פרויקט נקבעה עבורך:</p>
+  <table style="width:100%; border-collapse: collapse; margin: 16px 0;">
+    <tr><td style="padding: 6px; font-weight: bold;">נושא:</td><td>{{ meeting.title }}</td></tr>
+    <tr><td style="padding: 6px; font-weight: bold;">תאריך ושעה:</td><td>{{ meeting.scheduled_at.strftime('%d/%m/%Y %H:%M') }}</td></tr>
+    <tr><td style="padding: 6px; font-weight: bold;">משך:</td><td>{{ meeting.duration_minutes }} דקות</td></tr>
+    {% if meeting.is_recurring %}
+    <tr><td style="padding: 6px; font-weight: bold;">חזרה:</td>
+        <td>{% if meeting.recurrence_type == 'weekly' %}שבועי{% elif meeting.recurrence_type == 'biweekly' %}דו-שבועי{% elif meeting.recurrence_type == 'monthly' %}חודשי{% endif %}</td></tr>
+    {% endif %}
+  </table>
+  <p style="color: #6c757d; font-size: 12px;">מערכת מעקב פרויקטים — סייבר</p>
+</div>
+</body>
+</html>
