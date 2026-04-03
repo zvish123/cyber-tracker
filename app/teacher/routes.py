@@ -186,20 +186,36 @@ def edit_student(student_id):
     return redirect(url_for('teacher.students'))
 
 
-@teacher_bp.route('/students/<int:student_id>/delete', methods=['POST'])
-@teacher_required
+# @teacher_bp.route('/students/<int:student_id>/delete', methods=['POST'])
+# @teacher_required
+# def delete_student(student_id):
+#     student = Student.query.get_or_404(student_id)
+#     name = student.user.full_name
+#
+#     # Cancel Google Calendar events before deleting
+#     for meeting in student.meetings.filter_by(status='scheduled').all():
+#         if meeting.google_event_id:
+#             delete_event(current_user, meeting)
+#
+#     db.session.delete(student.user)   # cascades to Student → Project → Meetings
+#     db.session.commit()
+#     flash(f'התלמיד {name} הוסר מהמערכת', 'success')
+#     return redirect(url_for('teacher.students'))
+
+
+@teacher_bp.route('/student/<int:student_id>/delete', methods=['POST'])
+@login_required
 def delete_student(student_id):
     student = Student.query.get_or_404(student_id)
-    name = student.user.full_name
 
-    # Cancel Google Calendar events before deleting
-    for meeting in student.meetings.filter_by(status='scheduled').all():
-        if meeting.google_event_id:
-            delete_event(current_user, meeting)
+    # מחק קודם את ה-User המקושר
+    user = User.query.get(student.user_id)
 
-    db.session.delete(student.user)   # cascades to Student → Project → Meetings
+    db.session.delete(student)
+    if user:
+        db.session.delete(user)
+
     db.session.commit()
-    flash(f'התלמיד {name} הוסר מהמערכת', 'success')
     return redirect(url_for('teacher.students'))
 
 
